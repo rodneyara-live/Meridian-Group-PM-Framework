@@ -1,0 +1,282 @@
+---
+type: meeting
+subtype: mixed
+company: meridiangroup
+project: "Odoo CRM — Fintrust"
+sprint:
+date: 2026-01-30
+participants: [Elena Torres, Rodney-Ramirez, Carlos-Ruiz, Sergio-Mendoza, Hugo-Pacheco]
+facilitator: Rodney-Ramirez
+tags: [meeting/mixed, company/meridiangroup, project/odoo-crm-fintrust]
+---
+
+# 📋 Requirements Workshop — CRM Odoo Fintrust
+
+**Date:** 2026-01-30
+**Type:** Mixed (Meridian Group + GAF + Ledger-9)
+**Company:** Meridian Group / Fintrust / Ledger-9
+**Duration:** ~90m
+**Participants:** [[Elena-Torres]], [[Rodney-Ramirez]], [[Carlos-Ruiz]], [[Sergio-Mendoza]], [[Hugo-Pacheco]]
+**Facilitator:** [[Rodney-Ramirez]]
+
+> ℹ️ Second session of the day 01/30. [[Rodney-Ramirez]] and [[Elena-Torres]] participate for the first ~21 minutes, then leave for another meeting. [[Sergio-Mendoza]] and [[Hugo-Pacheco]] continue the technical-operational workshop for the rest of the session (~70 additional minutes).
+
+[[2026-01-30]] ← | → [[2026-02-04]]
+
+---
+
+## 🎯 Projects / Topics
+
+### [[PR-1.02_Odoo-CRM-Fintrust]] — 🟣 In Progress (38%)
+
+**Responsible:** [[Rodney-Ramirez]]
+
+**Meeting Context:**
+Requirements workshop where [[Sergio-Mendoza]] presents the mockups in detail and [[Hugo-Pacheco]] reviews field by field from the operational perspective of judicial processes. New entities were identified, mandatory fields per module were defined, and key architectural aspects regarding the relationship between Odoo CRM and Bonita were clarified.
+
+---
+
+## 🏗️ Lawyers Module — New Entity
+
+The need for a new entity/module to manage lawyers was identified:
+
+**Types of lawyers:**
+- **Internal:** Fintrust/Meridian Group lawyers
+- **External:** Lawyers associated with creditors
+
+**Lawyer module fields:**
+- Name
+- ID number
+- Phone
+- Email
+- Address
+- Position (role within the institution)
+- Occupation (professional category — use SIWO classifier)
+- Marital status
+- Nationality
+
+**[[Elena-Torres]]:** The occupation classifier to use is **SIWO** (international classifier). The table will be loaded from this classifier, no ad hoc options will be created. Pending: identify which SIWO classifiers apply to the project.
+
+**Lawyer entity relationships:**
+- N lawyers can be associated with 1 creditor
+- N lawyers can be associated with 1 debtor (in specific processes)
+
+> Pending: Validate additional fields with Ledger-9's legal area — [[Elena-Torres]] commits to pass the master lawyer table to [[Sergio-Mendoza]].
+
+---
+
+## 🏦 Entities to Seize Module (Ganchi) — Additional Fields
+
+Detailed review with [[Hugo-Pacheco]] of the fields required for judicial acts:
+
+**Fields to add:**
+- **Address:** Mandatory — goes inside the seizure act template
+- **RNC:** Tax registration number (alphanumeric, equivalent to RNC in DR)
+- **Commercial Registry:** Chamber of Commerce code (alphanumeric, not required for all cases — non-mandatory data)
+
+**Entity contacts (legal representative):**
+- Name
+- ID number (representative identification)
+- Marital status
+- Nationality
+- Occupation
+- Position
+- Contact data is not all shown in the list (only necessary ones), detail is accessed via click/edit
+- The **main contact checkbox** identifies which one will be automatically selected when generating an act
+
+**Confirmation from [[Hugo-Pacheco]]:**
+- Only the entity's address and name are included in the act
+- RNC, representative and representative document are data that must be in the system even if not always appearing in the final document
+
+---
+
+## 🚫 Non-Seizable Debtor Module
+
+List of individuals who cannot be seized for specific reasons.
+
+**Decisions:**
+- **Remove start/end date fields:** [[Hugo-Pacheco]] warned about the risk — if the period expires and the system automatically allows seizure, it could lead to malicious litigation
+- **Keep:** Person record (by ID, not by name) and the reason
+- **Reason:** Free text field — NOT selectable; cases are very heterogeneous (e.g., President of the Dominican Republic)
+- **Identification:** By ID, not by name (avoids duplicate errors from similar names)
+- **To seize:** Person must be manually removed from the list (conscious user action)
+
+---
+
+## 📋 Case Model — Review and Corrections
+
+### Case Header Structure
+
+Fields that must be in the header (immediately visible):
+- Case ID / Folio
+- **Principal debtor** ← must be in main position
+- **Product** (debt type: mortgage, card, loan, etc.) ← must be in header
+- Creditor
+- External reference
+- Currency
+- Balance/Capital total
+- Current case status
+- Portfolio
+- Initial judicial address
+- Confirmed address (boolean)
+- Filing date
+
+### Case Tabs (Agreed Structure)
+
+| Tab | Description |
+|---|---|
+| **Obligations** | (formerly "Assigned debts") — all debtor debts linked to the case |
+| **Debtors** | List of actors: principal debtor, spouse, guarantor, co-debtor — with their identified role |
+| **Notes** | General observations |
+| **Activities** | Record of actions taken (calls, messages, visits) |
+| **Legal Processes** | Info on ongoing processes (generated by Bonita, read-only) |
+| **Additional Information** | Complementary data + debt breakdown |
+
+### "Obligations" Tab (Renamed)
+
+**[[Hugo-Pacheco]]:** Rename from "Assigned debts" to **"Obligations"** — more universal and less confusing terminology.
+
+Shows the debtor's debts related to the case. Debtor roles are clearly identified: Principal Debtor, Co-debtor, Guarantor, Spouse.
+
+### Debt Breakdown (Additional Information Tab)
+
+Debt breakdown fields to capture:
+- Capital
+- Interest
+- Arrears
+- Fees (Fintrust/Meridian Group)
+- Legal expenses
+- ITB (Tax on Transferred Goods)
+
+**Dual balance:**
+- **Original bank debt:** What the creditor reports
+- **Debt with Meridian Group:** Capital + fees + legal expenses + ITB (what Fintrust charges)
+
+---
+
+## ⚖️ Clarification: Role of Odoo vs. Bonita in Judicial Management
+
+### Judicial Management in Odoo = READ-ONLY
+
+[[Hugo-Pacheco]] confirmed that Odoo does NOT execute judicial processes. The acts, seizures, releases and legal processes that appear in the CRM are **information returned by Bonita** for consultation:
+
+| Function | System |
+|---|---|
+| Act and template generation | Bonita |
+| BPMN process orchestration | Bonita |
+| Document storage | OpenKM |
+| Query and tracking | Odoo CRM |
+| Status update | Bonita → Odoo (via API) |
+
+**View filters in Judicial Management:**
+- Generated acts
+- Seizures
+- Releases
+- Legal processes
+
+These are filters on the case list according to their status, not independent actions.
+
+### Sending to Bonita
+
+**Individual button on the case:** "Seize" / "Send to process"
+**Mass operation:** Select multiple cases from the list → dropdown menu → "Seize" → assign batch number → mass submission to Bonita
+
+---
+
+## 📞 Activities Module — Dual Approach
+
+### Option 1: Activities within the Case
+- Each case has its activities tab
+- The operator records what they did directly on the case
+
+### Option 2: Independent Activities Module
+- Separate screen for the operator to quickly register activities
+- Flow: Select case → Activity type → Date → Result → Summary
+- Automatically syncs with the case view
+
+**Activity types:**
+- Call (with result: not located, located, refused, committed to payment, etc.)
+- Message
+- Visit
+- Extensible via configuration
+
+**Change log:**
+- Record of who changed which field, when, and from what value to what
+- Distinction between manual change (user) vs. automatic (system/Bonita)
+
+---
+
+## 🔗 OpenKM Integration (Confirmed)
+
+- OpenKM = document manager for documents generated by Bonita
+- Flow: User opens case → clicks on document → it is retrieved from OpenKM
+- Future: Possibility to migrate documents directly to Odoo (without OpenKM as intermediary)
+- Final decision pending validation
+
+---
+
+## 📚 Template Data Dictionary (Euris)
+
+[[Rodney-Ramirez]] shared [[Nicolas-Mercado]]'s document during the session, which maps ALL variables from the Bonita templates. This document:
+- Includes fields for lawyers, entities, debtors, creditors
+- Serves as a contrast with [[Sergio-Mendoza]]'s data model
+- Most fields come from Ledger-9
+- May reveal additional fields not captured in the current mockups
+
+---
+
+## ⚠️ Pending Decisions (Luis + Elena Torres)
+
+| Topic | Question | Urgency |
+|---|---|---|
+| Case Structure | By individual case or by individual (all debts consolidated)? | 🔥 High |
+| Portfolio Numbering | Specific numbering system? | Medium |
+| Statuses | Define exclusive Fintrust statuses vs. those inherited from Ledger-9 | 🔥 High |
+| Breakdown loading | Automatic via API or manual by operator? | High |
+| Activities Module | Integrated view in case or separate module as main? | Medium |
+| User roles | Define exact roles and permissions (Operators, Administrators, etc.) | Medium |
+| SIWO Classifiers | Which classifiers apply to the project? | Medium |
+
+---
+
+## ✅ Decisions Made
+
+- **Tab "Assigned debts" → renamed to "Obligations":** More universal terminology. Decision: [[Hugo-Pacheco]] + [[Sergio-Mendoza]]
+- **Non-seizable debtors — no dates:** Remove start/end dates; reason in free text; identification by ID number. Decision: [[Hugo-Pacheco]]
+- **Judicial Management in Odoo = READ-ONLY:** Odoo only displays what Bonita generates. Decision: [[Hugo-Pacheco]] confirmed with [[Rodney-Ramirez]]
+- **New Lawyers entity:** Internal and external lawyer module, with SIWO classifier for occupations. Decision: [[Elena-Torres]] + [[Sergio-Mendoza]]
+- **Address in Entities to Seize:** Mandatory field for act templates. Decision: [[Hugo-Pacheco]]
+- **Debt breakdown:** Tab with capital, interest, arrears, fees, legal expenses, ITB. Dual balance (bank vs. Meridian Group). Decision: [[Hugo-Pacheco]] + [[Sergio-Mendoza]]
+- **Mass submission to Bonita:** Multi-select function from case list + button/menu for batch submission. Decision: [[Sergio-Mendoza]] confirmed with [[Hugo-Pacheco]]
+- **OpenKM Integration:** Confirmed as document management solution. Decision: [[Hugo-Pacheco]]
+
+---
+
+## 📌 Pending Items
+
+- [ ] [[Elena-Torres]]: Explore SIWO classifiers to identify which apply to the project (occupations, marital statuses, etc.) 📅 2026-02-02
+- [ ] [[Elena-Torres]]: Pass master lawyer table (fields) to [[Sergio-Mendoza]] 📅 2026-02-02
+- [ ] [[Elena-Torres]]: Validate lawyer fields with legal area 📅 2026-02-02
+- [ ] [[Rodney-Ramirez]]: Define (with Carlos Ruiz and Elena Torres) pending architectural decisions — see pending decisions table above 📅 2026-02-02
+- [ ] [[Sergio-Mendoza]]: Update mockups with all adjustments from this session 📅 2026-02-02
+- [ ] [[Sergio-Mendoza]]: Add Lawyers module to the model 📅 2026-02-02
+- [ ] [[Sergio-Mendoza]]: Contrast updated data model with Euris' template dictionary 📅 2026-02-02
+
+---
+
+## 📌 Next Meetings / Follow-ups
+
+- [ ] Monday meeting: [[Sergio-Mendoza]] + [[Nicolas-Mercado]] + [[Rodrigo-Villalba]] — data dictionary, CRM model vs. Bonita templates contrast 📅 2026-02-02 (Monday) 🔥
+- [ ] Case architecture validation (individual vs. consolidated by individual) with [[Elena-Torres]] + [[Carlos-Ruiz]] 📅 2026-02-02
+
+---
+
+## 🔗 Triggers — Update after this meeting
+
+- [ ] New Lawyers entity (internal/external, SIWO classifier) → [[FOR-003-requirements-matrix]]
+- [ ] Obligations tab (renamed) + capital/interest/arrears/fees/expenses/ITB breakdown → [[FOR-003-requirements-matrix]]
+- [ ] Judicial Management = READ-ONLY in Odoo → [[FOR-003-requirements-matrix]]
+- [ ] OpenKM integration confirmed → [[FOR-003-requirements-matrix]]
+- [ ] Mass submission to Bonita (multi-select + batch) → [[FOR-003-requirements-matrix]]
+- [ ] Non-seizable debtors: no dates, free text reason, ID by ID number → [[FOR-003-requirements-matrix]]
+- [ ] Weekly report → [[FOR-007-weekly-status-report]]
